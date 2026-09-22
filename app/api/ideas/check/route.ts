@@ -38,6 +38,7 @@ exactly this shape:
       max_tokens: 1500,
       messages: [{ role: "user", content: prompt }],
       mcp_servers: [{ type: "url", url: "https://mcp.consensus.app/mcp", name: "consensus" }],
+      tools: [{ type: "mcp_toolset", mcp_server_name: "consensus" }],
     }),
   });
 
