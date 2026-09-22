@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Paper, not white, not cream-cliché-#F4F1EA — a slightly grey stock */
+  --paper: #EDEAE2;
+  --paper-line: #D8D3C6;
+  --ink: #24231F;
+  --ink-soft: #5B584C;
+  /* A single accent: deep clinical green, "worth pursuing" */
+  --signal: #1F5B45;
+  --signal-soft: #E4ECE7;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Source Serif 4", Georgia, serif;
+}
+
+.meta {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.01em;
+  color: var(--ink-soft);
+}
+
+.ruled {
+  border-bottom: 1px solid var(--paper-line);
+}
