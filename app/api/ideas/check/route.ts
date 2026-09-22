@@ -30,6 +30,7 @@ exactly this shape:
     headers: {
       "x-api-key": process.env.ANTHROPIC_API_KEY!,
       "anthropic-version": "2023-06-01",
+      "anthropic-beta": "mcp-client-2026-09-15",
       "content-type": "application/json",
     },
     body: JSON.stringify({
