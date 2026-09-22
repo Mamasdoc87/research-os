@@ -33,7 +33,7 @@ exactly this shape:
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-6",
+      model: "claude-sonnet-5",
       max_tokens: 1500,
       messages: [{ role: "user", content: prompt }],
       mcp_servers: [{ type: "url", url: "https://mcp.consensus.app/mcp", name: "consensus" }],
@@ -41,7 +41,11 @@ exactly this shape:
   });
 
   if (!claudeRes.ok) {
-    return NextResponse.json({ error: `Claude API error: ${claudeRes.status}` }, { status: 502 });
+    const errText = await claudeRes.text();
+    return NextResponse.json(
+      { error: `Claude API error: ${claudeRes.status}`, detail: errText },
+      { status: 502 }
+    );
   }
 
   const data = await claudeRes.json();
@@ -64,7 +68,6 @@ exactly this shape:
     [ideaId, parsed.summary, parsed.novelty_score, JSON.stringify(parsed.key_papers), JSON.stringify(data)]
   );
 
-  // Re-sync the OneDrive copy so it now includes the verdict.
   const accessToken = (session as any).accessToken;
   if (accessToken) {
     syncIdeaToOneDrive(accessToken, { id: ideaId, title, note }, parsed);
