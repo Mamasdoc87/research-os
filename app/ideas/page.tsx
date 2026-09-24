@@ -16,13 +16,22 @@ type Check = {
   key_papers: { title: string; year: number; url: string }[];
 };
 
+type Strategy = {
+  pubmed_query: string;
+  embase_query: string;
+  cochrane_query: string;
+  notes: string;
+};
+
 export default function IdeasPage() {
   const { data: session, status } = useSession();
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [checks, setChecks] = useState<Record<string, Check>>({});
+  const [strategies, setStrategies] = useState<Record<string, Strategy>>({});
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [runningId, setRunningId] = useState<string | null>(null);
+  const [strategyRunningId, setStrategyRunningId] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -71,6 +80,22 @@ export default function IdeasPage() {
     setRunningId(null);
   }
 
+  async function runStrategy(idea: Idea) {
+    setStrategyRunningId(idea.id);
+    const res = await fetch("/api/ideas/search-strategy", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ideaId: idea.id, title: idea.title, note: idea.note }),
+    });
+    const strategy = await res.json();
+    setStrategies((s) => ({ ...s, [idea.id]: strategy }));
+    setStrategyRunningId(null);
+  }
+
+  function copy(text: string) {
+    navigator.clipboard.writeText(text);
+  }
+
   return (
     <main className="max-w-2xl mx-auto px-6 py-16">
       <div className="flex items-baseline justify-between mb-1">
@@ -106,6 +131,7 @@ export default function IdeasPage() {
       <ol className="space-y-10">
         {ideas.map((idea) => {
           const check = checks[idea.id];
+          const strategy = strategies[idea.id];
           return (
             <li key={idea.id} className="ruled pb-8">
               <div className="flex items-baseline justify-between gap-4">
@@ -140,6 +166,46 @@ export default function IdeasPage() {
                         </li>
                       ))}
                     </ul>
+                  )}
+
+                  {!strategy && (
+                    <button
+                      onClick={() => runStrategy(idea)}
+                      disabled={strategyRunningId === idea.id}
+                      className="meta mt-3 underline decoration-[var(--paper-line)] underline-offset-4 hover:decoration-[var(--ink)]"
+                    >
+                      {strategyRunningId === idea.id
+                        ? "drafting search strategy…"
+                        : "draft search strategy"}
+                    </button>
+                  )}
+
+                  {strategy && (
+                    <div className="mt-4 space-y-3">
+                      {[
+                        ["PubMed / MEDLINE", strategy.pubmed_query],
+                        ["Embase", strategy.embase_query],
+                        ["Cochrane CENTRAL", strategy.cochrane_query],
+                      ].map(([label, q]) => (
+                        <div key={label}>
+                          <div className="meta flex items-center justify-between">
+                            <span>{label}</span>
+                            <button
+                              onClick={() => copy(q)}
+                              className="underline decoration-[var(--paper-line)] hover:decoration-[var(--ink)]"
+                            >
+                              copy
+                            </button>
+                          </div>
+                          <p className="meta text-[var(--ink)] bg-white/40 p-2 mt-1 break-words">
+                            {q}
+                          </p>
+                        </div>
+                      ))}
+                      {strategy.notes && (
+                        <p className="meta text-[var(--ink-soft)] italic">{strategy.notes}</p>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
