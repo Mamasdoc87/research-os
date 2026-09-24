@@ -83,7 +83,8 @@ export default function IdeasPage() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ ideaId: idea.id, title: idea.title, note: idea.note }),
     });
-    setChecks((c) => ({ ...c, [idea.id]: await res.json() }));
+    const checkData = await res.json();
+    setChecks((c) => ({ ...c, [idea.id]: checkData }));
     setRunningId(null);
   }
 
@@ -94,13 +95,15 @@ export default function IdeasPage() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ ideaId: idea.id, title: idea.title, note: idea.note }),
     });
-    setStrategies((s) => ({ ...s, [idea.id]: await res.json() }));
+    const strategyData = await res.json();
+    setStrategies((s) => ({ ...s, [idea.id]: strategyData }));
     setStrategyRunningId(null);
   }
 
   async function loadResults(ideaId: string) {
     const res = await fetch(`/api/ideas/results?ideaId=${ideaId}`);
-    setResults((r) => ({ ...r, [ideaId]: await res.json() }));
+    const data = await res.json();
+    setResults((r) => ({ ...r, [ideaId]: data }));
   }
 
   async function runPubmed(idea: Idea, query: string) {
