@@ -1,45 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 type Idea = { id: string; title: string; note: string | null; created_at: string };
 type Check = {
   summary: string;
   novelty_score: number;
   key_papers: { title: string; year: number; url: string }[];
-};
-type Strategy = {
-  pubmed_query: string;
-  embase_query: string;
-  cochrane_query: string;
-  notes: string;
-};
-type Result = {
-  id: string;
-  source: string;
-  title: string;
-  authors: string | null;
-  journal: string | null;
-  year: number | null;
-  url: string | null;
-  abstract: string | null;
-  decision: "pending" | "include" | "exclude";
+  publication_score: number;
+  publication_explanation: string;
 };
 
 export default function IdeasPage() {
   const { data: session, status } = useSession();
+  const router = useRouter();
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [checks, setChecks] = useState<Record<string, Check>>({});
-  const [strategies, setStrategies] = useState<Record<string, Strategy>>({});
-  const [results, setResults] = useState<Record<string, Result[]>>({});
-  const [openResults, setOpenResults] = useState<Record<string, boolean>>({});
   const [title, setTitle] = useState("");
   const [note, setNote] = useState("");
   const [runningId, setRunningId] = useState<string | null>(null);
-  const [strategyRunningId, setStrategyRunningId] = useState<string | null>(null);
-  const [pubmedRunningId, setPubmedRunningId] = useState<string | null>(null);
-  const [importingId, setImportingId] = useState<string | null>(null);
+  const [addingId, setAddingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -52,10 +34,11 @@ export default function IdeasPage() {
   if (status !== "authenticated") {
     return (
       <main className="max-w-md mx-auto px-6 py-24 text-center">
-        <h1 className="text-2xl mb-6">Research OS</h1>
+        <h1 className="font-display text-2xl mb-6">Research OS</h1>
         <button
           onClick={() => signIn("azure-ad")}
-          className="meta px-4 py-2 border border-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--paper)] transition-colors"
+          className="font-ui px-4 py-2 rounded-lg border"
+          style={{ borderColor: "var(--ink)" }}
         >
           Sign in with Microsoft
         </button>
@@ -88,130 +71,109 @@ export default function IdeasPage() {
     setRunningId(null);
   }
 
-  async function runStrategy(idea: Idea) {
-    setStrategyRunningId(idea.id);
-    const res = await fetch("/api/ideas/search-strategy", {
+  async function addToProjects(idea: Idea) {
+    setAddingId(idea.id);
+    const res = await fetch("/api/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ideaId: idea.id, title: idea.title, note: idea.note }),
+      body: JSON.stringify({ ideaId: idea.id, name: idea.title }),
     });
-    const strategyData = await res.json();
-    setStrategies((s) => ({ ...s, [idea.id]: strategyData }));
-    setStrategyRunningId(null);
-  }
-
-  async function loadResults(ideaId: string) {
-    const res = await fetch(`/api/ideas/results?ideaId=${ideaId}`);
-    const data = await res.json();
-    setResults((r) => ({ ...r, [ideaId]: data }));
-  }
-
-  async function runPubmed(idea: Idea, query: string) {
-    setPubmedRunningId(idea.id);
-    await fetch("/api/ideas/search-pubmed", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ideaId: idea.id, query }),
-    });
-    await loadResults(idea.id);
-    setOpenResults((o) => ({ ...o, [idea.id]: true }));
-    setPubmedRunningId(null);
-  }
-
-  async function importFile(idea: Idea, source: "embase" | "cochrane", file: File) {
-    setImportingId(idea.id);
-    const risText = await file.text();
-    await fetch("/api/ideas/search-import", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ideaId: idea.id, source, risText }),
-    });
-    await loadResults(idea.id);
-    setOpenResults((o) => ({ ...o, [idea.id]: true }));
-    setImportingId(null);
-  }
-
-  async function decide(idea: Idea, resultId: string, decision: "include" | "exclude") {
-    await fetch("/api/ideas/results", {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ resultId, decision }),
-    });
-    setResults((r) => ({
-      ...r,
-      [idea.id]: r[idea.id].map((x) => (x.id === resultId ? { ...x, decision } : x)),
-    }));
-  }
-
-  function copy(text: string) {
-    navigator.clipboard.writeText(text);
+    const project = await res.json();
+    router.push(`/projects/${project.id}`);
   }
 
   return (
-    <main className="max-w-2xl mx-auto px-6 py-16">
-      <div className="flex items-baseline justify-between mb-1">
-        <h1 className="text-3xl">Ideas</h1>
-        <button onClick={() => signOut()} className="meta hover:underline">
-          {session?.user?.email} — sign out
-        </button>
-      </div>
-      <p className="meta mb-10">a running log, not a board — synced to your OneDrive</p>
+    <main className="max-w-2xl mx-auto px-8 py-12">
+      <h1 className="font-display font-medium text-[29px] mb-1" style={{ color: "var(--navy)" }}>
+        Ideas
+      </h1>
+      <p className="font-ui text-[13px] mb-9" style={{ color: "var(--ink-soft)" }}>
+        A running log, not a board — synced to your OneDrive.
+      </p>
 
-      <div className="mb-14">
+      <div className="card p-6 mb-10">
+        <h2 className="font-display font-medium text-[19px] mb-3.5">What's the idea?</h2>
         <input
-          className="w-full bg-transparent text-xl ruled pb-2 mb-3 outline-none placeholder:text-[var(--ink-soft)]"
-          placeholder="What's the idea?"
+          className="w-full bg-transparent text-[16px] ruled pb-2 mb-3 outline-none"
+          placeholder="A question, technique, or clinical problem…"
+          style={{ color: "var(--ink)" }}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
         <textarea
-          className="w-full bg-transparent ruled pb-2 mb-3 outline-none resize-none placeholder:text-[var(--ink-soft)]"
+          className="w-full bg-transparent ruled pb-2 mb-4 outline-none resize-none text-[15px]"
           placeholder="Any rough notes — the messier the better"
           rows={2}
+          style={{ color: "var(--ink)" }}
           value={note}
           onChange={(e) => setNote(e.target.value)}
         />
         <button
           onClick={capture}
-          className="meta px-4 py-2 border border-[var(--ink)] hover:bg-[var(--ink)] hover:text-[var(--paper)] transition-colors"
+          className="font-ui text-[12.5px] rounded-lg px-4 py-2"
+          style={{ background: "var(--navy)", color: "var(--paper)" }}
         >
           Log it
         </button>
       </div>
 
-      <ol className="space-y-10">
+      <ol className="space-y-8">
         {ideas.map((idea) => {
           const check = checks[idea.id];
-          const strategy = strategies[idea.id];
-          const ideaResults = results[idea.id] ?? [];
-          const included = ideaResults.filter((r) => r.decision === "include").length;
-
           return (
-            <li key={idea.id} className="ruled pb-8">
+            <li key={idea.id} className="card p-6">
               <div className="flex items-baseline justify-between gap-4">
-                <h2 className="text-xl">{idea.title}</h2>
-                <span className="meta shrink-0">
+                <h2 className="text-[18px]">{idea.title}</h2>
+                <span className="font-ui text-[11px] shrink-0" style={{ color: "var(--ink-soft)" }}>
                   {new Date(idea.created_at).toLocaleDateString()}
                 </span>
               </div>
-              {idea.note && <p className="text-[var(--ink-soft)] mt-1">{idea.note}</p>}
+              {idea.note && (
+                <p className="mt-1 text-[14.5px]" style={{ color: "var(--ink-soft)" }}>
+                  {idea.note}
+                </p>
+              )}
 
               {!check && (
                 <button
                   onClick={() => runCheck(idea)}
                   disabled={runningId === idea.id}
-                  className="meta mt-3 underline decoration-[var(--paper-line)] underline-offset-4 hover:decoration-[var(--ink)]"
+                  className="font-ui text-[12px] mt-4 underline"
+                  style={{ color: "var(--signal)" }}
                 >
                   {runningId === idea.id ? "checking the literature…" : "check the literature"}
                 </button>
               )}
 
               {check && (
-                <div className="mt-4 pl-4 border-l-2" style={{ borderColor: "var(--signal)" }}>
-                  <div className="meta mb-1">novelty {check.novelty_score}/5</div>
-                  <p>{check.summary}</p>
+                <div className="mt-5 pt-5" style={{ borderTop: "1px solid var(--paper-line)" }}>
+                  <div className="flex items-center gap-4 mb-3">
+                    <div
+                      className="rounded-full flex items-center justify-center shrink-0"
+                      style={{ width: 46, height: 46, background: "var(--signal-bg)" }}
+                    >
+                      <i className="ti ti-star text-[19px]" style={{ color: "var(--signal)" }} />
+                    </div>
+                    <div>
+                      <div
+                        className="font-display font-medium text-[24px] leading-none"
+                        style={{ color: "var(--signal)" }}
+                      >
+                        {check.publication_score}
+                        <span className="text-sm" style={{ color: "var(--ink-soft)" }}> / 10</span>
+                      </div>
+                      <div className="font-ui text-[11px]" style={{ color: "var(--gold)" }}>
+                        Publication potential
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-[15px] mb-4">{check.publication_explanation}</p>
+
+                  <div className="font-ui text-[12px] mb-2" style={{ color: "var(--ink-soft)" }}>
+                    novelty {check.novelty_score}/5 — {check.summary}
+                  </div>
                   {check.key_papers?.length > 0 && (
-                    <ul className="meta mt-2 space-y-1">
+                    <ul className="font-ui text-[12px] space-y-1 mb-4" style={{ color: "var(--signal)" }}>
                       {check.key_papers.map((p, i) => (
                         <li key={i}>
                           <a href={p.url} target="_blank" className="hover:underline">
@@ -222,127 +184,15 @@ export default function IdeasPage() {
                     </ul>
                   )}
 
-                  {!strategy && (
-                    <button
-                      onClick={() => runStrategy(idea)}
-                      disabled={strategyRunningId === idea.id}
-                      className="meta mt-3 underline decoration-[var(--paper-line)] underline-offset-4 hover:decoration-[var(--ink)]"
-                    >
-                      {strategyRunningId === idea.id
-                        ? "drafting search strategy…"
-                        : "draft search strategy"}
-                    </button>
-                  )}
-
-                  {strategy && (
-                    <div className="mt-4 space-y-3">
-                      {[
-                        ["PubMed / MEDLINE", strategy.pubmed_query, "pubmed"],
-                        ["Embase", strategy.embase_query, "embase"],
-                        ["Cochrane CENTRAL", strategy.cochrane_query, "cochrane"],
-                      ].map(([label, q, key]) => (
-                        <div key={label}>
-                          <div className="meta flex items-center justify-between">
-                            <span>{label}</span>
-                            <span className="flex gap-3">
-                              <button
-                                onClick={() => copy(q)}
-                                className="underline decoration-[var(--paper-line)] hover:decoration-[var(--ink)]"
-                              >
-                                copy
-                              </button>
-                              {key === "pubmed" && (
-                                <button
-                                  onClick={() => runPubmed(idea, q)}
-                                  disabled={pubmedRunningId === idea.id}
-                                  className="underline decoration-[var(--paper-line)] hover:decoration-[var(--ink)]"
-                                >
-                                  {pubmedRunningId === idea.id ? "searching…" : "search PubMed now"}
-                                </button>
-                              )}
-                              {(key === "embase" || key === "cochrane") && (
-                                <label className="underline decoration-[var(--paper-line)] hover:decoration-[var(--ink)] cursor-pointer">
-                                  {importingId === idea.id ? "importing…" : "import .ris export"}
-                                  <input
-                                    type="file"
-                                    accept=".ris,.txt"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                                      if (file) importFile(idea, key as "embase" | "cochrane", file);
-                                    }}
-                                  />
-                                </label>
-                              )}
-                            </span>
-                          </div>
-                          <p className="meta text-[var(--ink)] bg-white/40 p-2 mt-1 break-words">
-                            {q}
-                          </p>
-                        </div>
-                      ))}
-                      {strategy.notes && (
-                        <p className="meta text-[var(--ink-soft)] italic">{strategy.notes}</p>
-                      )}
-                    </div>
-                  )}
-
-                  {ideaResults.length > 0 && (
-                    <div className="mt-5">
-                      <button
-                        onClick={() => setOpenResults((o) => ({ ...o, [idea.id]: !o[idea.id] }))}
-                        className="meta underline decoration-[var(--paper-line)] hover:decoration-[var(--ink)]"
-                      >
-                        {ideaResults.length} papers pooled — {included} included{" "}
-                        {openResults[idea.id] ? "(hide)" : "(show)"}
-                      </button>
-
-                      {openResults[idea.id] && (
-                        <ul className="mt-3 space-y-3">
-                          {ideaResults.map((r) => (
-                            <li key={r.id} className="ruled pb-2">
-                              <div className="flex items-start justify-between gap-3">
-                                <div>
-                                  <a
-                                    href={r.url ?? undefined}
-                                    target="_blank"
-                                    className="hover:underline"
-                                  >
-                                    {r.title}
-                                  </a>
-                                  <div className="meta">
-                                    {r.journal ?? ""} {r.year ?? ""} · {r.source}
-                                  </div>
-                                </div>
-                                <span className="flex gap-2 shrink-0">
-                                  <button
-                                    onClick={() => decide(idea, r.id, "include")}
-                                    className={`meta px-2 py-0.5 border ${
-                                      r.decision === "include"
-                                        ? "bg-[var(--signal)] text-white border-[var(--signal)]"
-                                        : "border-[var(--paper-line)]"
-                                    }`}
-                                  >
-                                    include
-                                  </button>
-                                  <button
-                                    onClick={() => decide(idea, r.id, "exclude")}
-                                    className={`meta px-2 py-0.5 border ${
-                                      r.decision === "exclude"
-                                        ? "bg-[var(--ink-soft)] text-white border-[var(--ink-soft)]"
-                                        : "border-[var(--paper-line)]"
-                                    }`}
-                                  >
-                                    exclude
-                                  </button>
-                                </span>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  )}
+                  <button
+                    onClick={() => addToProjects(idea)}
+                    disabled={addingId === idea.id}
+                    className="font-ui text-xs rounded-lg px-4 py-2 border flex items-center gap-1.5"
+                    style={{ borderColor: "var(--ink)" }}
+                  >
+                    {addingId === idea.id ? "adding…" : "Create systematic review"}
+                    <i className="ti ti-arrow-right text-[13px]" />
+                  </button>
                 </div>
               )}
             </li>

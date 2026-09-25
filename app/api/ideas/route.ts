@@ -9,7 +9,22 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "not signed in" }, { status: 401 });
 
   const { rows } = await db().query(
-    `select * from ideas where owner_id = $1 order by created_at desc`,
+    `select
+       i.*,
+       lc.publication_score,
+       lc.publication_explanation,
+       lc.summary as check_summary,
+       exists(select 1 from projects p where p.idea_id = i.id) as has_project
+     from ideas i
+     left join lateral (
+       select publication_score, publication_explanation, summary
+       from literature_checks
+       where idea_id = i.id
+       order by created_at desc
+       limit 1
+     ) lc on true
+     where i.owner_id = $1
+     order by i.created_at desc`,
     [(session as any).userId]
   );
   return NextResponse.json(rows);
