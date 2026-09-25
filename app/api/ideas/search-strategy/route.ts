@@ -21,6 +21,16 @@ each database (e.g. PubMed uses [MeSH Terms], [tiab]; Embase uses /exp,
 synonyms, spelling variants, and MeSH/Emtree terms where appropriate,
 combined with AND/OR exactly as that database's engine expects.
 
+Favor sensitivity (broad recall) over precision, as is standard practice
+for systematic review searches — it's far worse to miss a true match than
+to retrieve some irrelevant results a human will screen out. The one
+exception: if any search term is also a common, unrelated anatomical
+structure or concept (e.g. "biceps" alone would also match "biceps
+femoris," an unrelated hamstring tendon), use the more specific compound
+term (e.g. "distal biceps brachii" / "biceps brachii tendon") rather than
+the bare ambiguous word, so the search doesn't fill with results about a
+completely different body part. Do not otherwise narrow the search.
+
 Respond with ONLY a JSON object, no preamble, no markdown fences:
 
 {
