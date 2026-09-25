@@ -23,13 +23,27 @@ combined with AND/OR exactly as that database's engine expects.
 
 Favor sensitivity (broad recall) over precision, as is standard practice
 for systematic review searches — it's far worse to miss a true match than
-to retrieve some irrelevant results a human will screen out. The one
-exception: if any search term is also a common, unrelated anatomical
-structure or concept (e.g. "biceps" alone would also match "biceps
-femoris," an unrelated hamstring tendon), use the more specific compound
-term (e.g. "distal biceps brachii" / "biceps brachii tendon") rather than
-the bare ambiguous word, so the search doesn't fill with results about a
-completely different body part. Do not otherwise narrow the search.
+to retrieve some irrelevant results a human will screen out. Two specific
+exceptions where narrowing is warranted, based on real search failures:
+
+1. If a location/laterality/degree qualifier (e.g. "distal," "partial,"
+   "proximal") is central to the research question, make sure EVERY
+   anatomy/intervention term that needs it is actually tied to it with AND
+   or a proximity operator — not just included in one OR block while other
+   OR terms remain bare. A bare term (e.g. "biceps tendon" OR "tenodesis")
+   will pull in a large body of unrelated literature (e.g. long-head/
+   proximal biceps tenodesis, a completely different and heavily-studied
+   procedure) if nothing forces the "distal" qualifier onto it too.
+
+2. If a term is also a substring or adjacent-word match for an unrelated
+   anatomical structure (e.g. "biceps" also appears in "biceps femoris," a
+   hamstring tendon unrelated to the arm), add an explicit NOT/exclusion
+   for that unrelated structure's distinguishing word (e.g. NOT "femoris").
+   A phrase like "distal biceps" is not enough on its own to avoid this,
+   since it can still appear verbatim inside an unrelated compound term
+   like "distal biceps femoris tendon."
+
+Do not otherwise narrow the search — when in doubt, keep it broad.
 
 Respond with ONLY a JSON object, no preamble, no markdown fences:
 
