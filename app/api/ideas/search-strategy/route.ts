@@ -45,6 +45,13 @@ exceptions where narrowing is warranted, based on real search failures:
 
 Do not otherwise narrow the search — when in doubt, keep it broad.
 
+Keep each database's query as concise as it can be while still being
+complete: don't list near-duplicate synonyms that a MeSH/Emtree explode
+term already covers, and don't repeat a concept block (e.g. the anatomy
+block) with slightly different wording in more than one place. A tight,
+non-redundant query is easier for a reviewer to read and just as
+sensitive as a padded one.
+
 Respond with ONLY a JSON object, no preamble, no markdown fences:
 
 {
@@ -63,7 +70,7 @@ Respond with ONLY a JSON object, no preamble, no markdown fences:
     },
     body: JSON.stringify({
       model: "claude-sonnet-5",
-      max_tokens: 4000,
+      max_tokens: 8000,
       messages: [{ role: "user", content: prompt }],
     }),
   });
